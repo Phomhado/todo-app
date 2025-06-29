@@ -1,0 +1,18 @@
+# === BACKEND (Rails) ===
+/backend/log/*
+/backend/tmp/*
+/backend/.bundle/
+/backend/vendor/
+/backend/db/*.sqlite3
+/backend/db/*.sqlite3-journal
+/backend/.env*
+/backend/node_modules/
+
+# === FRONTEND (Next.js) ===
+/frontend/.next/
+/frontend/node_modules/
+/frontend/.env*
+
+# === GERAL ===
+.DS_Store
+.env
