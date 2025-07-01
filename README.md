@@ -67,12 +67,14 @@ todo-app/
 
 - [x] Project structure  
 - [x] Task model with essential fields  
-- [ ] RESTful API for tasks  
+- [x] RESTful API for tasks  
 - [ ] Frontend integration  
 - [ ] Authentication  
 - [ ] Deployment
 
 ---
+## 📄 License
+MIT — use, fork, and build freely.
 
 ## ✨ Author
 
