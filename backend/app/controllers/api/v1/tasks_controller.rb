@@ -1,16 +1,16 @@
 class Api::V1::TasksController < ApplicationController
     def index
-        tasks = Task.all
+        tasks = @current_user.tasks
         render json: tasks
     end
 
     def show
-        tasks = Task.find_by(params[:id])
-        tasks ? render(json: tasks) : render(json: { error: 'Task not found' }, status: :not_found)
+        task = @current_user.tasks.build(task_params)
+        task ? render(json: task) : render(json: { error: 'Task not found' }, status: :not_found)
     end
     
     def create
-        task = Task.new(task_params)
+        task = @current_user.tasks.build(task_params)
         if task.save
             render json: task, status: :created
         else
@@ -19,10 +19,10 @@ class Api::V1::TasksController < ApplicationController
     end
 
     def update
-        task = Task.find_by(id: params[:id])
+        task = @current_user.tasks.find_by(id: params[:id])
 
         if task.nil?
-            render json: { error: 'Task not found' }, status: :not_found
+            render json: { error: 'Task not found or not authorized' }, status: :not_found
         elsif task.update(task_params)
             render json: task
         else
@@ -31,10 +31,10 @@ class Api::V1::TasksController < ApplicationController
     end
 
     def destroy
-        task = Task.find_by(id: params[:id])
+        task = @current_user.tasks.find_by(id: params[:id])
 
         if task.nil?
-            render json: { error: 'Task not found' }, status: :not_found
+            render json: { error: 'Task not found or not authorized' }, status: :not_found
         elsif task.destroy
             head :no_content
         else
@@ -45,6 +45,6 @@ class Api::V1::TasksController < ApplicationController
     private
 
     def task_params
-    params.require(:task).permit(:title, :description, :due_date, :column, :done_at)
+        params.require(:task).permit(:title, :description, :due_date, :column, :done_at)
     end
 end
