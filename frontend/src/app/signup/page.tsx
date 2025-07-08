@@ -77,6 +77,7 @@ export default function SignUp() {
         setError(err.errors?.[0] || "Failed to create account.");
       }
     } catch {
+      console.error("Fetch error:", error);
       setError("An error occurred while creating the account.");
     }
   };
