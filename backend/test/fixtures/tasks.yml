@@ -1,15 +1,17 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 one:
-  title: MyString
-  description: MyText
+  title: Buy groceries
+  description: Purchase milk and eggs
   due_date: 2025-06-29 00:54:40
-  column: MyString
-  done_at: 2025-06-29 00:54:40
+  column: todo
+  done_at: 
+  user: alice
 
 two:
-  title: MyString
-  description: MyText
+  title: Finish report
+  description: Complete the quarterly report
   due_date: 2025-06-29 00:54:40
-  column: MyString
-  done_at: 2025-06-29 00:54:40
+  column: in_progress
+  done_at: 
+  user: alice

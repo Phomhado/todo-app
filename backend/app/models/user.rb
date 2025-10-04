@@ -1,4 +1,5 @@
 class User < ApplicationRecord
+    has_many :tasks, dependent: :destroy
     has_secure_password
 
     VALID_PASSWORD_REGEX = /\A(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}\z/
