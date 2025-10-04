@@ -5,8 +5,13 @@ class Api::V1::TasksController < ApplicationController
     end
 
     def show
-        task = @current_user.tasks.build(task_params)
-        task ? render(json: task) : render(json: { error: 'Task not found' }, status: :not_found)
+        task = @current_user.tasks.find_by(id: params[:id])
+
+        if task.nil?
+            render json: { error: 'Task not found or not authorized' }, status: :not_found
+        else
+            render json: task
+        end
     end
     
     def create
