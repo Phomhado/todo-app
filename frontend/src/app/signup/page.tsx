@@ -1,9 +1,42 @@
 "use client";
 
-import { useState } from "react";
-import { z } from "zod";
+import Link from "next/link";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { z } from "zod";
 import AuthLayout from "../components/AuthLayout";
+
+type SignUpForm = {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+};
+
+type PasswordVisibility = {
+  password: boolean;
+  confirmPassword: boolean;
+};
+
+type ErrorPayload = {
+  errors?: string[];
+  error?: string;
+  message?: string;
+};
+
+const extractErrorMessage = (payload: unknown) => {
+  if (!payload || typeof payload !== "object") {
+    return undefined;
+  }
+
+  const details = payload as ErrorPayload;
+
+  if (Array.isArray(details.errors) && details.errors.length > 0) {
+    return details.errors[0];
+  }
+
+  return details.error ?? details.message ?? undefined;
+};
 
 // Define o schema com Zod
 const SignUpSchema = z.object({
@@ -22,7 +55,7 @@ const SignUpSchema = z.object({
 });
 
 export default function SignUp() {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<SignUpForm>({
     name: "",
     email: "",
     password: "",
@@ -30,14 +63,25 @@ export default function SignUp() {
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState<PasswordVisibility>({
+    password: false,
+    confirmPassword: false,
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = ({ target }: ChangeEvent<HTMLInputElement>) => {
+    setForm((previous) => ({ ...previous, [target.name]: target.value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const togglePasswordVisibility = (field: keyof PasswordVisibility) => {
+    setShowPassword((previous) => ({
+      ...previous,
+      [field]: !previous[field],
+    }));
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setError("");
     setSuccess("");
 
@@ -49,8 +93,16 @@ export default function SignUp() {
       return;
     }
 
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+    if (!apiUrl) {
+      setError("API URL is not configured.");
+      return;
+    }
+
     try {
-      const res = await fetch('http://127.0.0.1:3001/api/v1/users', {
+      setIsSubmitting(true);
+      const response = await fetch(`${apiUrl}/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -64,21 +116,22 @@ export default function SignUp() {
         }),
       });
 
-      if (res.ok) {
-        setSuccess("Account created successfully!");
-        setForm({
-          name: "",
-          email: "",
-          password: "",
-          confirmPassword: "",
-        });
-      } else {
-        const err = await res.json();
-        setError(err.errors?.[0] || "Failed to create account.");
+      const payload: unknown = await response
+        .json()
+        .catch(() => ({ message: "Unable to parse server response." }));
+
+      if (!response.ok) {
+        setError(extractErrorMessage(payload) || "Failed to create account.");
+        return;
       }
-    } catch {
-      console.error("Fetch error:", error);
+
+      setSuccess("Account created successfully!");
+      setForm({ name: "", email: "", password: "", confirmPassword: "" });
+    } catch (err) {
+      console.error("Sign up error:", err);
       setError("An error occurred while creating the account.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -89,10 +142,13 @@ export default function SignUp() {
         Create a new account to start managing your tasks.
       </p>
 
-      <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+      <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
         <div>
-          <label className="block text-sm font-medium text-gray-300">Name</label>
+          <label className="block text-sm font-medium text-gray-300" htmlFor="name">
+            Name
+          </label>
           <input
+            id="name"
             type="text"
             name="name"
             value={form.name}
@@ -100,12 +156,16 @@ export default function SignUp() {
             className="mt-1 block w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Your name"
             required
+            autoComplete="name"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">Email</label>
+          <label className="block text-sm font-medium text-gray-300" htmlFor="email">
+            Email
+          </label>
           <input
+            id="email"
             type="email"
             name="email"
             value={form.email}
@@ -113,47 +173,75 @@ export default function SignUp() {
             className="mt-1 block w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="you@example.com"
             required
+            autoComplete="email"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">Password</label>
+          <label className="block text-sm font-medium text-gray-300" htmlFor="password">
+            Password
+          </label>
           <div className="relative">
             <input
-              type={showPassword ? "text" : "password"}
+              id="password"
+              type={showPassword.password ? "text" : "password"}
               name="password"
               value={form.password}
               onChange={handleChange}
               className="mt-1 block w-full px-3 py-2 pr-10 bg-gray-800 border border-gray-700 rounded-md text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Your password"
               required
+              autoComplete="new-password"
             />
             <span
-              onClick={() => setShowPassword((prev) => !prev)}
+              onClick={() => togglePasswordVisibility("password")}
               className="absolute inset-y-0 right-3 flex items-center cursor-pointer text-gray-400"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  togglePasswordVisibility("password");
+                }
+              }}
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showPassword.password ? <EyeOff size={18} /> : <Eye size={18} />}
             </span>
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300">Confirm Password</label>
+          <label
+            className="block text-sm font-medium text-gray-300"
+            htmlFor="confirmPassword"
+          >
+            Confirm Password
+          </label>
           <div className="relative">
             <input
-              type={showPassword ? "text" : "password"}
+              id="confirmPassword"
+              type={showPassword.confirmPassword ? "text" : "password"}
               name="confirmPassword"
               value={form.confirmPassword}
               onChange={handleChange}
               className="mt-1 block w-full px-3 py-2 pr-10 bg-gray-800 border border-gray-700 rounded-md text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Repeat your password"
               required
+              autoComplete="new-password"
             />
             <span
-              onClick={() => setShowPassword((prev) => !prev)}
+              onClick={() => togglePasswordVisibility("confirmPassword")}
               className="absolute inset-y-0 right-3 flex items-center cursor-pointer text-gray-400"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  togglePasswordVisibility("confirmPassword");
+                }
+              }}
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showPassword.confirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </span>
           </div>
         </div>
@@ -163,17 +251,18 @@ export default function SignUp() {
 
         <button
           type="submit"
-          className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
+          disabled={isSubmitting}
         >
-          Create Account
+          {isSubmitting ? "Creating account..." : "Create Account"}
         </button>
       </form>
 
       <p className="mt-4 text-sm text-center text-gray-400">
         Already have an account?{" "}
-        <a href="/login" className="text-blue-500 hover:underline">
+        <Link href="/login" className="text-blue-500 hover:underline">
           Log in
-        </a>
+        </Link>
       </p>
     </AuthLayout>
   );
