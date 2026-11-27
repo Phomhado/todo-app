@@ -7,14 +7,15 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 interface Task {
   id: number;
   title: string;
-  description: string;
-  due_date: string;
+  description: string | null;
+  due_date: string | null;
   column: ColumnKey;
   done_at: string | null;
 }
@@ -39,7 +40,7 @@ const MISSING_TOKEN_MESSAGE = "Unauthorized. No token found.";
 const UNAUTHORIZED_MESSAGE = "Your session has expired. Please log in again.";
 
 const formatDueDate = (value: string) => {
-  const date = new Date(value);
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value);
 
   if (Number.isNaN(date.getTime())) {
     return value;
@@ -125,7 +126,6 @@ export default function TasksPage() {
       localStorage.removeItem("token");
       setTasks([]);
       setError(message);
-      setActionError(message);
       router.push("/login");
     },
     [router],
@@ -260,13 +260,13 @@ export default function TasksPage() {
     }, { todo: [], doing: [], test: [], done: [] });
   }, [tasks]);
 
-  const closeForm = () => {
+  const closeForm = useCallback(() => {
     setIsFormOpen(false);
     setFormError("");
     setFormValues(DEFAULT_FORM_VALUES);
     setActiveTaskId(null);
     setIsSubmitting(false);
-  };
+  }, []);
 
   const openCreateForm = () => {
     setFormMode("create");
@@ -280,8 +280,8 @@ export default function TasksPage() {
     setFormMode("edit");
     setFormValues({
       title: task.title,
-      description: task.description,
-      due_date: formatForInput(task.due_date),
+      description: task.description ?? "",
+      due_date: formatForInput(task.due_date ?? ""),
       column: task.column,
     });
     setFormError("");
@@ -376,6 +376,7 @@ export default function TasksPage() {
   };
 
   const handleDelete = async (task: Task) => {
+    if (!window.confirm(`Delete "${task.title}"? This cannot be undone.`)) return;
     setActionError("");
     setActionMessage("");
 
@@ -403,6 +404,7 @@ export default function TasksPage() {
     <main className="p-6 max-w-6xl mx-auto text-white">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold">Your Tasks</h1>
+        <button type="button" onClick={() => { localStorage.removeItem("token"); router.push("/login"); }} className="rounded-md border border-gray-600 px-4 py-2 text-sm">Log out</button>
         <button
           type="button"
           onClick={openCreateForm}
@@ -431,13 +433,13 @@ export default function TasksPage() {
       )}
 
       {actionError && (
-        <p className="mt-4 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
+        <p role="alert" className="mt-4 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
           {actionError}
         </p>
       )}
 
       {actionMessage && (
-        <p className="mt-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">
+        <p role="status" className="mt-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">
           {actionMessage}
         </p>
       )}
@@ -493,9 +495,8 @@ export default function TasksPage() {
                       </div>
                       <div className="text-xs text-gray-400">
                         <p>
-                          Due: <span className="text-gray-200">{task.due_date ? formatDueDate(task.due_date) : "No due date"}</span>
+                          Due: <span className="text-gray-200">{task.due_date ? formatDueDate(task.due_date.slice(0, 10)) : "No due date"}</span>
                         </p>
-                        <p className="capitalize">Status: {task.column}</p>
                         {task.done_at && (
                           <p className="text-emerald-400">
                             Completed on {formatDueDate(task.done_at)}
@@ -596,6 +597,28 @@ function TaskFormModal({
   onChange,
   onSubmit,
 }: TaskFormModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    dialog?.querySelector<HTMLInputElement>("#task-title")?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isSubmitting) onClose();
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled])',
+      ));
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => { document.removeEventListener("keydown", handleKeyDown); previousFocus?.focus(); };
+  }, [isOpen, isSubmitting, onClose]);
+
   if (!isOpen) {
     return null;
   }
@@ -614,17 +637,20 @@ function TaskFormModal({
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
+      aria-labelledby="task-form-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
       data-testid="task-form-modal"
     >
       <div className="w-full max-w-lg rounded-lg border border-gray-700 bg-gray-900 p-6 shadow-lg">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-white">{title}</h2>
+          <h2 id="task-form-title" className="text-xl font-semibold text-white">{title}</h2>
           <button
             type="button"
             onClick={onClose}
+            disabled={isSubmitting}
             className="rounded-md px-2 py-1 text-sm text-gray-300 hover:bg-gray-800"
           >
             Close
@@ -649,6 +675,7 @@ function TaskFormModal({
               onChange={(event) => handleChange("title", event.target.value)}
               className="w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
               required
+              maxLength={255}
             />
           </div>
 
@@ -665,7 +692,6 @@ function TaskFormModal({
               value={values.description}
               onChange={(event) => handleChange("description", event.target.value)}
               className="h-24 w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-              required
             />
           </div>
 
@@ -681,7 +707,6 @@ function TaskFormModal({
                 value={values.due_date}
                 onChange={(event) => handleChange("due_date", event.target.value)}
                 className="w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                required
               />
             </div>
 
@@ -711,6 +736,7 @@ function TaskFormModal({
             <button
               type="button"
               onClick={onClose}
+              disabled={isSubmitting}
               className="rounded-md border border-gray-600 px-4 py-2 text-sm font-semibold text-gray-300 hover:border-gray-400 hover:text-white"
             >
               Cancel

@@ -88,7 +88,7 @@ export default function SignUp() {
     const result = SignUpSchema.safeParse(form);
 
     if (!result.success) {
-      const firstError = result.error.errors[0]?.message || "Invalid data";
+      const firstError = result.error.issues[0]?.message || "Invalid data";
       setError(firstError);
       return;
     }
@@ -193,20 +193,12 @@ export default function SignUp() {
               required
               autoComplete="new-password"
             />
-            <span
+            <button type="button" aria-label={showPassword.password ? "Hide password" : "Show password"}
               onClick={() => togglePasswordVisibility("password")}
               className="absolute inset-y-0 right-3 flex items-center cursor-pointer text-gray-400"
-              role="button"
-              tabIndex={0}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  togglePasswordVisibility("password");
-                }
-              }}
             >
               {showPassword.password ? <EyeOff size={18} /> : <Eye size={18} />}
-            </span>
+            </button>
           </div>
         </div>
 
@@ -229,20 +221,12 @@ export default function SignUp() {
               required
               autoComplete="new-password"
             />
-            <span
+            <button type="button" aria-label={showPassword.confirmPassword ? "Hide confirmation password" : "Show confirmation password"}
               onClick={() => togglePasswordVisibility("confirmPassword")}
               className="absolute inset-y-0 right-3 flex items-center cursor-pointer text-gray-400"
-              role="button"
-              tabIndex={0}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  togglePasswordVisibility("confirmPassword");
-                }
-              }}
             >
               {showPassword.confirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </span>
+            </button>
           </div>
         </div>
 

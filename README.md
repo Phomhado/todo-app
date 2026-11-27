@@ -1,82 +1,22 @@
-# 🧱 To Do App (Full-Stack)
+﻿# To Do App
 
-A simple full-stack Kanban-style task management app, with four fixed columns:
+A Rails API and Next.js frontend for a personal Kanban board with To Do, Doing, Test and Done columns. Each account sees only its own tasks. Moving a task to Done records its completion time; moving it back clears it.
 
-- 📝 To Do  
-- 🚧 Doing  
-- 🧪 Test  
-- ✅ Done
+This is a local project: the frontend, API, and PostgreSQL database run on your own computer. You do not need a hosted database, cloud account, or paid service. Task data stays in your local PostgreSQL database unless you configure an external database yourself. The frontend dependencies are downloaded during setup.
 
-Each task includes:
-- title: brief summary
-- description: detailed info
-- due_date: deadline
-- column: current phase
-- done_at: completion timestamp (optional)
+## Local setup
 
----
+Prerequisites: Ruby 3.3.0, Bundler, PostgreSQL, and Node.js 22.12 or later.
 
-## ⚙️ Tech Stack
+1. Configure PostgreSQL access with `POSTGRES_USER`, `POSTGRES_PASSWORD`, and optionally `POSTGRES_HOST` and `POSTGRES_PORT`. Create a role with permission to create databases.
+2. In `backend`, run `bundle install`, `bundle exec rails db:prepare`, and `bundle exec rails server -b 127.0.0.1 -p 3001`.
+3. Create `frontend/.env.local` containing `NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1`.
+4. In `frontend`, run `npm ci` and `npm run dev -- --hostname localhost`. Open http://localhost:3000.
 
-### Backend
-- Ruby on Rails (API-only mode)
-- PostgreSQL
+The API accepts requests from `http://localhost:3000` by default. Set `FRONTEND_ORIGINS` to a comma-separated list if your local frontend uses a different origin. PostgreSQL is free to install and run locally; its databases and credentials are managed on your computer.
 
-### Frontend
-- Next.js (with TypeScript)
-- TailwindCSS
+## Checks
 
----
+Run `bundle exec rails test` in `backend` with PostgreSQL available. In `frontend`, run `npm test`, `npm run typecheck`, and `npm run build`.
 
-## 🚀 Getting Started
-
-### Clone the repository
-
-git clone https://github.com/Phomhado/todo-app.git  
-cd todo-app
-
-### Start the backend (Rails API)
-
-cd backend  
-bundle install  
-rails db:create  
-rails s -p 3001
-
-### Start the frontend (Next.js)
-
-cd frontend  
-npm install  
-npm run dev
-
-- Frontend: http://localhost:3000  
-- Backend: http://localhost:3001
-
----
-
-## 🗂️ Project Structure
-
-todo-app/  
-├── backend/   # Ruby on Rails API  
-├── frontend/  # Next.js app  
-├── README.md  
-└── .gitignore  
-
----
-
-## 🛠️ Features In Progress
-
-- [x] Project structure  
-- [x] Task model with essential fields  
-- [x] RESTful API for tasks  
-- [ ] Frontend integration  
-- [ ] Authentication  
-- [ ] Deployment
-
----
-## 📄 License
-MIT — use, fork, and build freely.
-
-## ✨ Author
-
-**Pedro Oliveira**  
-
+Authentication uses a 24-hour bearer token stored in browser local storage. This setup is intended for local use, not for exposing the project to the public internet.
