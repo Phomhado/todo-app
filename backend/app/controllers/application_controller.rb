@@ -8,9 +8,18 @@ class ApplicationController < ActionController::API
         token = header.to_s.match(/\ABearer (\S+)\z/i)&.captures&.first
 
         begin
-            decoded = JWT.decode(token, Rails.application.secret_key_base, true, algorithm: 'HS256')[0]
+            decoded = JWT.decode(
+                token,
+                Rails.application.secrets.secret_key_base,
+                true,
+                algorithm: 'HS256',
+                verify_expiration: true,
+                required_claims: ['exp']
+            )[0]
             @current_user = User.find(decoded['user_id'])
-            rescue JWT::DecodeError, ActiveRecord::RecordNotFound
+        rescue JWT::ExpiredSignature
+            render json: { errors: 'Token has expired' }, status: :unauthorized
+        rescue JWT::DecodeError, ActiveRecord::RecordNotFound
             render json: { errors: 'Unauthorized' }, status: :unauthorized
         end
     end
