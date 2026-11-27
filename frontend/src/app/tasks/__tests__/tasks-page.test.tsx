@@ -4,11 +4,10 @@ import TasksPage from "../page";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const pushMock = vi.fn();
+const routerMock = { push: pushMock };
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: pushMock,
-  }),
+  useRouter: () => routerMock,
 }));
 
 type FetchResponse<T> = {
@@ -167,6 +166,7 @@ describe("TasksPage", () => {
   });
 
   test("deletes a task and updates local state", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     const task = {
       id: 11,
       title: "Delta",

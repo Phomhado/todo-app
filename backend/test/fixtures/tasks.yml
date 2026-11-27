@@ -12,6 +12,6 @@ two:
   title: Finish report
   description: Complete the quarterly report
   due_date: 2025-06-29 00:54:40
-  column: in_progress
+  column: doing
   done_at: 
   user: alice

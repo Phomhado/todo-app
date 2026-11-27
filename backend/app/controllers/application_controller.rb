@@ -5,7 +5,7 @@ class ApplicationController < ActionController::API
 
     def authorize_request
         header = request.headers['Authorization']
-        token = header.split(' ').last if header
+        token = header.to_s.match(/\ABearer (\S+)\z/i)&.captures&.first
 
         begin
             decoded = JWT.decode(
