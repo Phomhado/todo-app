@@ -25,10 +25,17 @@ class Api::V1::TasksControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Task not found or not authorized", body["error"]
   end
 
+  test "should reject an expired token" do
+    get api_v1_task_url(@task), headers: auth_headers(@user, expires_at: 1.minute.ago)
+
+    assert_response :unauthorized
+    assert_equal "Token has expired", JSON.parse(response.body)["errors"]
+  end
+
   private
 
-  def auth_headers(user)
-    token = JWT.encode({ user_id: user.id }, jwt_secret, "HS256")
+  def auth_headers(user, expires_at: 24.hours.from_now)
+    token = JWT.encode({ user_id: user.id, exp: expires_at.to_i }, jwt_secret, "HS256")
     { "Authorization" => "Bearer #{token}" }
   end
 
